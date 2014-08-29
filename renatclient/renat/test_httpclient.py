@@ -3,21 +3,32 @@ Created on Aug 26, 2014
 
 @author: stefan
 '''
-from twisted.trial import unittest
+import unittest
+import utwist
+from twisted.internet import defer
 
 from renat import httpclient
-from twisted.internet import reactor, defer
 
 class Test(unittest.TestCase):
 
 
-
-    def testName(self):
+    @utwist.with_reactor
+    @defer.inlineCallbacks
+    def test_get(self):
         def out(data):
             print data
             
-        d = httpclient.get("http://www.google.ch/");
-        d.addCallback(out)
-        return d
+        body = yield httpclient.request("GET", "http://www.python.org");
+        self.assertTrue("<html" in body)
         
+    @utwist.with_reactor
+    @defer.inlineCallbacks
+    def test_get_headers(self):
+        def out(data):
+            print data
+            
+        _, headers = yield httpclient.request("GET", "http://www.python.org", return_headers=True);
+        self.assertTrue("Content-Type" in headers)
+        
+
 
