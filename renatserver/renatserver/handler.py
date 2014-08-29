@@ -64,8 +64,7 @@ class RecordHandler(tornado.web.RequestHandler):
         record_version = db.put(record_id, idepo, data, now)
          
         response = {"record_id": record_id,
-                     "record_version": record_version,
-                     "value":data}
+                     "record_version": record_version}
         self.finish(json.dumps(response, indent=4))
             
             
