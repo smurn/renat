@@ -1,4 +1,5 @@
 import unittest
+from Crypto import Random
 from renat import webclient
 from utwist import with_reactor
 from twisted.internet import defer
@@ -7,12 +8,39 @@ key = "x"*16
 
 class TestWebClientIntegration(unittest.TestCase):
     
+    def setUp(self):
+        # each test uses a different secret. That way the tests 
+        # don't interfer with each other, even when they use the same keys.
+        secret = Random.get_random_bytes(64)
+        self.client = webclient.WebClient("http://localhost:8888", secret)
+    
     @with_reactor
     @defer.inlineCallbacks
-    def test_put(self):
-        client = webclient.WebClient("http://localhost:8888", 'foo')
-        version = yield client.put("mykey", "myvalue")
-        print version
+    def _test_put(self):
+        version = yield self.client.put("mykey", "myvalue")
+        
+    @with_reactor
+    @defer.inlineCallbacks
+    def test_get(self):
+        version = yield self.client.put("mykey", "myvalue")
+        actual = yield self.client.get("mykey", version)
+        self.assertEqual("myvalue", actual)
+
+    @with_reactor
+    @defer.inlineCallbacks
+    def _test_get_jungest(self):
+        yield self.client.put("mykey", "myvalue1")
+        yield self.client.put("mykey", "myvalue2")
+        actual = yield self.client.get_jungest("mykey")
+        self.assertEqual("myvalue2", actual)
+
+    @with_reactor
+    @defer.inlineCallbacks
+    def _test_get_oldest(self):
+        yield self.client.put("mykey", "myvalue1")
+        yield self.client.put("mykey", "myvalue2")
+        actual = yield self.client.get_oldest("mykey")
+        self.assertEqual("myvalue1", actual)
 
 
 class TestWebClient(unittest.TestCase):
@@ -37,7 +65,8 @@ class TestWebClient(unittest.TestCase):
         plain = "Hello World!"
         cipher = webclient.encrypt_value(key, plain)
         pos = len(cipher)/2
-        cipher = cipher[:pos] + 'x' + cipher[pos+1:]
+        replace_by = "x" if  cipher[pos] != "x" else "y"
+        cipher = cipher[:pos] + replace_by + cipher[pos+1:]
         self.assertRaises(ValueError, webclient.decrypt_value, key, cipher)
         
     def test_random(self):

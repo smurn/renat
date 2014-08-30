@@ -27,34 +27,50 @@ class WebClient(object):
     def put(self, key, value):
         key = encrypt_key(self.encryption_key, key)
         value = encrypt_value(self.encryption_key, value)
-        result = yield self._post(key, "JUNGEST", value)
+        result = yield self._post_request(key, "JUNGEST", value)
         defer.returnValue(result["record_version"])
     
     @defer.inlineCallbacks
     def get(self, key, version, wait=False):
-        record_id = encrypt_key(self.encryption_key, key)
-        timeout = 60 if wait else None
-        while True:
-            try:
-                response = yield self._get(record_id, version, timeout = timeout)
-                response = decrypt_value(self.encryption_key, response)
-                defer.returnValue(response)
-            except defer.CancelledError:
-                raise
-            except Error as e:
-                if not wait or e.code != httplib.NOT_FOUND:
-                    raise
+        response = yield self._get(key, version, wait)
+        defer.returnValue(response["value"])
+                    
+    @defer.inlineCallbacks
+    def get_jungest(self, key, wait=False):
+        response = yield self._get(key, "JUNGEST", wait)
+        defer.returnValue((response["record_version"], response["value"]))
+    
+    @defer.inlineCallbacks
+    def get_oldest(self, key, wait=False):
+        response = yield self._get(key, "OLDEST", wait)
+        defer.returnValue((response["record_version"], response["value"]))
     
     def _url(self, record_id, record_version):
+        record_version = str(record_version)
         url = "{base}/rec/{id}/{version}".format(
                     base=self.server,
                     id=urllib.quote(record_id, ''), 
                     version=urllib.quote(record_version, ''))
         return url
 
+    @defer.inlineCallbacks
+    def _get(self, key, version, wait=False):
+        record_id = encrypt_key(self.encryption_key, key)
+        timeout = 60 if wait else None
+        while True:
+            try:
+                response = yield self._get_request(record_id, version, timeout = timeout)
+                if "value" in response:
+                    response["value"] = decrypt_value(self.encryption_key, response["value"])
+                defer.returnValue(response)
+            except defer.CancelledError:
+                raise
+            except Error as e:
+                if not wait or e.code != httplib.NOT_FOUND:
+                    raise
 
     @defer.inlineCallbacks
-    def _get(self, record_id, record_version, timeout=None): 
+    def _get_request(self, record_id, record_version, timeout=None): 
         url = self._url(record_id, record_version)
         if timeout:
             values = {'timeout': timeout}
@@ -62,11 +78,11 @@ class WebClient(object):
             values = {}
         answer = yield httpclient.request("GET", url, values, 
                     pool=self.pool, proxy_host=self.proxy_host, proxy_port=self.proxy_port)
-        defer.returnValue(answer)
+        defer.returnValue(json.loads(answer))
         
         
     @defer.inlineCallbacks
-    def _post(self, record_id, record_version, value):
+    def _post_request(self, record_id, record_version, value):
         idepo = get_random_string()
         url = self._url(record_id, record_version)
         answer = yield httpclient.request("POST", url, {"idepo":idepo, "data":value}, {"Content-Type":["application/x-www-form-urlencoded"]},
