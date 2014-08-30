@@ -33,7 +33,7 @@ class InMemoryRecordDatabase(object):
         #: dict that maps `(id,idepo)` to `version`
         self._idepo = {}
         
-        #: dict that maps `id` to the entinel of the record's version list.
+        #: dict that maps `id` to the sentinel of the record's version list.
         self._versions = {}
         
         #: sentinel of the evict linked list
@@ -160,6 +160,7 @@ class InMemoryRecordDatabase(object):
         record.version_prev.version_next = record
        
         return record_version
+        
         
     def touch(self, record_id, record_version, now=None):
         """
