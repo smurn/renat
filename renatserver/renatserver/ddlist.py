@@ -1,4 +1,6 @@
 
+_NO_DEFAULT = object()
+
 class LinkedList(object):
     
     _next_name = 0
@@ -52,6 +54,24 @@ class LinkedList(object):
         self._setleft(rightitem, leftitem)
         self._len -= 1
         self._removeattr(item)
+        
+    def get_leftmost(self, default=_NO_DEFAULT):
+        item = self._getright(self._sentinel)
+        if item is self._sentinel:
+            if default == _NO_DEFAULT:
+                raise ValueError("empty list")
+            else:
+                return default
+        return item
+    
+    def get_rightmost(self, default=_NO_DEFAULT):
+        item = self._getleft(self._sentinel)
+        if item is self._sentinel:
+            if default == _NO_DEFAULT:
+                raise ValueError("empty list")
+            else:
+                return default
+        return item
     
     def __iter__(self):
         return self._iter(self._generation)
@@ -77,6 +97,9 @@ class LinkedList(object):
     
     def __len__(self):
         return self._len
+    
+    def __nonzero__(self):
+        return self._len > 0
     
     def __eq__(self, other):
         if not isinstance(other, LinkedList):

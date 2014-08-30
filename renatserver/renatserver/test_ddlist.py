@@ -98,6 +98,14 @@ class TestLinkedList(unittest.TestCase):
         self.target.append_right(item2)
         self.assertEqual(2, len(self.target))
         
+    def test_bool_empty(self):
+        item1 = Item("1")
+        self.target.append_right(item1)
+        self.assertTrue(bool(self.target))
+        
+    def test_bool_one(self):
+        self.assertFalse(bool(self.target))
+        
     def test_len_remove(self):
         item1 = Item("1")
         item2 = Item("2")
@@ -163,3 +171,26 @@ class TestLinkedList(unittest.TestCase):
         self.target.remove(item3)
         self.assertRaises(ValueError, next, it)
         
+    def test_leftmost_empty(self):
+        self.assertRaises(ValueError, self.target.get_leftmost)
+        
+    def test_rightmost_empty(self):
+        self.assertRaises(ValueError, self.target.get_leftmost)
+        
+    def test_leftmost(self):
+        item1 = Item("1")
+        item2 = Item("2")
+        self.target = ddlist.LinkedList([item1, item2])
+        self.assertEqual(item1, self.target.get_leftmost())
+        
+    def test_rightmost(self):
+        item1 = Item("1")
+        item2 = Item("2")
+        self.target = ddlist.LinkedList([item1, item2])
+        self.assertEqual(item2, self.target.get_rightmost())
+        
+    def test_leftmost_default(self):
+        self.assertEqual(None, self.target.get_leftmost(None))
+        
+    def test_rightmost_default(self):
+        self.assertEqual(None, self.target.get_rightmost(None))
