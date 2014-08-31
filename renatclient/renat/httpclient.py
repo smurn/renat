@@ -2,7 +2,7 @@ import urllib
 import StringIO
 import httplib
 
-from twisted.internet import reactor, defer
+from twisted.internet import reactor
 from twisted.web.http_headers import Headers
 from twisted.web.error import Error
 from twisted.internet.endpoints import TCP4ClientEndpoint
@@ -12,7 +12,6 @@ from twisted.python.failure import Failure
 GET = "GET"
 POST = "POST"
 
-@defer.inlineCallbacks
 def request(method, url, values={}, header={}, return_headers=False, pool=None, proxy_host=None, proxy_port=80):
     """
     Performs an HTTP request.
@@ -54,25 +53,29 @@ def request(method, url, values={}, header={}, return_headers=False, pool=None, 
     else:
         request_body = None
     
+    def got_response(response):
+        
+        def got_body(response_body):
+            if return_headers:
+                response_headers = dict(response.headers.getAllRawHeaders())
+                return (response_body, response_headers)
+            else:
+                return response_body
+
+        if response.code != httplib.OK:
+            return Failure(Error(response.code))
+        d = readBody(response)
+        d.addCallback(got_body)
+        return d
+    
     d = agent.request(
         method,
         url,
         Headers(header),
         request_body)
-
-    response = yield d
     
-    if response.code != httplib.OK:
-        defer.returnValue(Failure(Error(response.code)))
-    
-    response_body = yield readBody(response)
-    
-    if return_headers:
-        response_headers = dict(response.headers.getAllRawHeaders())
-        defer.returnValue((response_body, response_headers))
-    else:
-        defer.returnValue(response_body)
-
+    d.addCallback(got_response)
+    return d
 
 def _make_agent(pool=None, proxy_host=None, proxy_port=80):
     if proxy_host:
