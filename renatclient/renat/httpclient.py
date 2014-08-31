@@ -80,6 +80,6 @@ def _make_agent(pool=None, proxy_host=None, proxy_port=80):
         agent = ProxyAgent(endpoint, pool=pool)
     else:
         agent = Agent(reactor, pool=pool)
-    agent = BrowserLikeRedirectAgent(Agent(reactor))
+    agent = BrowserLikeRedirectAgent(agent)
     return agent
         
