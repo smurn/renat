@@ -81,6 +81,28 @@ class TestWebClientIntegration(unittest.TestCase):
         actual = yield d
         self.assertEqual("ok", actual)
         
+    @with_reactor
+    @defer.inlineCallbacks
+    def test_waitcancel_get_jungest(self):
+        d = self.client.get_jungest("key", wait=True)
+        d.cancel()
+        def eb(e):
+            return "ok"
+        d.addErrback(eb)
+        actual = yield d
+        self.assertEqual("ok", actual)
+        
+    @with_reactor
+    @defer.inlineCallbacks
+    def test_waitcancel_get_oldest(self):
+        d = self.client.get_oldest("key", wait=True)
+        d.cancel()
+        def eb(e):
+            return "ok"
+        d.addErrback(eb)
+        actual = yield d
+        self.assertEqual("ok", actual)
+            
 class TestWebClient(unittest.TestCase):
 
     def test_no_plain_in_cipher(self):
