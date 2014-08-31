@@ -23,8 +23,15 @@ class WebClient(object):
         self.pool = HTTPConnectionPool(reactor, persistent=True)
         self.pool.maxPersistentPerHost = 1024
     
+    def close(self):
+        return self.pool.closeCachedConnections()
+    
     @defer.inlineCallbacks
     def put(self, key, value):
+        """
+        Store new key-value pair.
+        @return deferred new version
+        """
         key = encrypt_key(self.encryption_key, key)
         value = encrypt_value(self.encryption_key, value)
         result = yield self._post_request(key, "JUNGEST", value)
@@ -32,6 +39,11 @@ class WebClient(object):
     
     @defer.inlineCallbacks
     def get(self, key, version, wait=False):
+        """
+        Returns the value for the given key and version.
+        If `wait` is `True` then we wait for the key & version
+        to be stored. The deferred can be canceled.
+        """
         response = yield self._get(key, version, wait)
         defer.returnValue(response["value"])
                     
@@ -66,14 +78,14 @@ class WebClient(object):
             except defer.CancelledError:
                 raise
             except Error as e:
-                if not wait or e.code != httplib.NOT_FOUND:
+                if not wait or e.status != httplib.NOT_FOUND:
                     raise
 
     @defer.inlineCallbacks
     def _get_request(self, record_id, record_version, timeout=None): 
         url = self._url(record_id, record_version)
         if timeout:
-            values = {'timeout': timeout}
+            values = {'timeout': str(timeout)}
         else:
             values = {}
         answer = yield httpclient.request("GET", url, values, 

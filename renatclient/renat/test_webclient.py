@@ -14,10 +14,14 @@ class TestWebClientIntegration(unittest.TestCase):
         secret = Random.get_random_bytes(64)
         self.client = webclient.WebClient("http://localhost:8888", secret)
     
+    def twisted_teardown(self):
+        return self.client.close()
+    
     @with_reactor
     @defer.inlineCallbacks
-    def _test_put(self):
+    def test_put(self):
         version = yield self.client.put("mykey", "myvalue")
+        self.assertEqual(1, version)
         
     @with_reactor
     @defer.inlineCallbacks
@@ -28,21 +32,55 @@ class TestWebClientIntegration(unittest.TestCase):
 
     @with_reactor
     @defer.inlineCallbacks
-    def _test_get_jungest(self):
+    def test_get_jungest(self):
         yield self.client.put("mykey", "myvalue1")
         yield self.client.put("mykey", "myvalue2")
         actual = yield self.client.get_jungest("mykey")
-        self.assertEqual("myvalue2", actual)
+        self.assertEqual((2,"myvalue2"), actual)
 
     @with_reactor
     @defer.inlineCallbacks
-    def _test_get_oldest(self):
+    def test_get_oldest(self):
         yield self.client.put("mykey", "myvalue1")
         yield self.client.put("mykey", "myvalue2")
         actual = yield self.client.get_oldest("mykey")
-        self.assertEqual("myvalue1", actual)
+        self.assertEqual((1,"myvalue1"), actual)
+        
+    @with_reactor
+    @defer.inlineCallbacks
+    def test_wait_get(self):
+        d = self.client.get("key", 1, wait=True)
+        yield self.client.put("key", "value")
+        actual = yield d
+        self.assertEqual("value", actual)
+        
+    @with_reactor
+    @defer.inlineCallbacks
+    def test_wait_get_jungest(self):
+        d = self.client.get_jungest("key", wait=True)
+        yield self.client.put("key", "value")
+        actual = yield d
+        self.assertEqual((1, "value"), actual)
 
-
+    @with_reactor
+    @defer.inlineCallbacks
+    def test_wait_get_oldest(self):
+        d = self.client.get_oldest("key", wait=True)
+        yield self.client.put("key", "value")
+        actual = yield d
+        self.assertEqual((1, "value"), actual)
+        
+    @with_reactor
+    @defer.inlineCallbacks
+    def test_waitcancel_get(self):
+        d = self.client.get("key", 1, wait=True)
+        d.cancel()
+        def eb(e):
+            return "ok"
+        d.addErrback(eb)
+        actual = yield d
+        self.assertEqual("ok", actual)
+        
 class TestWebClient(unittest.TestCase):
 
     def test_no_plain_in_cipher(self):

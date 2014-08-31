@@ -47,7 +47,7 @@ def request(method, url, values={}, header={}, return_headers=False, pool=None, 
     values = urllib.urlencode(values)
     if values:
         if method == GET:
-            url = url + "?" + urllib.urlencode(values)
+            url = url + "?" + values
             request_body = None
         else:
             request_body = FileBodyProducer(StringIO.StringIO(values))

@@ -33,7 +33,8 @@ class RecordHandler(tornado.web.RequestHandler):
         if record_version == "JUNGEST":
             record_version = yield _timeout_helper(db.jungest_version, db.jungest_version_future, timeout, [record_id, now])
         
-        record_version = int(record_version)
+        if record_version is not None:
+            record_version = int(record_version)
         
         if record_version is None:
             data = None

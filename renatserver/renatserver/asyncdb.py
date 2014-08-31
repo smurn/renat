@@ -36,7 +36,7 @@ class ASyncRecordDatabase(object):
         if not now:
             now = datetime.datetime.now()
         
-        data = self.db(record_id, record_version, now)
+        data = self.db.get(record_id, record_version, now)
         if data is not None:
             future = tornado.concurrent.Future()
             future.set_result(data)
