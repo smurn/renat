@@ -78,7 +78,7 @@ class RecordHandler(tornado.web.RequestHandler):
 def _timeout_helper(regular_func, future_func, timeout, args):
     if timeout > 0:
         future = future_func(*args)
-        future = tornado.gen.with_timeout(timeout, future)
+        future = tornado.gen.with_timeout(datetime.timedelta(seconds=timeout), future)
         try:
             retval = yield future
         except tornado.gen.TimeoutError:
