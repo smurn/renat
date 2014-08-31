@@ -1,4 +1,4 @@
-from twisted.internet import reactor, defer
+from twisted.internet import reactor
 from twisted.web.client import HTTPConnectionPool
 from twisted.web.error import Error
 from Crypto.Hash import SHA
@@ -32,8 +32,8 @@ class WebClient(object):
         Store new key-value pair.
         @return deferred new version
         """
-        key = encrypt_key(self.encryption_key, key)
-        value = encrypt_value(self.encryption_key, value)
+        key = _encrypt_key(self.encryption_key, key)
+        value = _encrypt_value(self.encryption_key, value)
         d = self._post_request(key, "JUNGEST", value)
         d.addCallback(lambda r:r["record_version"])
         return d
@@ -79,7 +79,7 @@ class WebClient(object):
         
         def got_response(response):
             if "value" in response:
-                response["value"] = decrypt_value(self.encryption_key, response["value"])
+                response["value"] = _decrypt_value(self.encryption_key, response["value"])
             return response
         
         def got_failure(failure):
@@ -88,7 +88,7 @@ class WebClient(object):
             else:
                 return failure
         
-        record_id = encrypt_key(self.encryption_key, key)
+        record_id = _encrypt_key(self.encryption_key, key)
         timeout = 60 if wait else None
         return make_request()
 
@@ -106,7 +106,7 @@ class WebClient(object):
         
 
     def _post_request(self, record_id, record_version, value):
-        idepo = get_random_string()
+        idepo = _get_random_string()
         url = self._url(record_id, record_version)
         d = httpclient.request("POST", url, {"idepo":idepo, "data":value}, {"Content-Type":["application/x-www-form-urlencoded"]},
                     pool=self.pool, proxy_host=self.proxy_host, proxy_port=self.proxy_port)
@@ -114,14 +114,14 @@ class WebClient(object):
         return d
 
 
-def encrypt_key(key, plaintext):
+def _encrypt_key(key, plaintext):
     return hmac.new(key, plaintext, hashlib.sha1).hexdigest()
 
-def get_random_string():
+def _get_random_string():
     binary = Random.get_random_bytes(8)
     return base64.b64encode(binary)
 
-def encrypt_value(key, plaintext):
+def _encrypt_value(key, plaintext):
     compressed = bz2.compress(plaintext)
     
     digest = SHA.new(compressed).digest()
@@ -137,7 +137,7 @@ def encrypt_value(key, plaintext):
     binary = iv + ciphertext
     return base64.b64encode(binary)
 
-def decrypt_value(key, data):
+def _decrypt_value(key, data):
     
     binary = base64.b64decode(data)
     
