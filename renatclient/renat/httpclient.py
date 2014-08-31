@@ -1,6 +1,8 @@
 import urllib
 import StringIO
 import httplib
+import os
+import urlparse
 
 from twisted.internet import reactor
 from twisted.web.http_headers import Headers
@@ -12,7 +14,7 @@ from twisted.python.failure import Failure
 GET = "GET"
 POST = "POST"
 
-def request(method, url, values={}, header={}, return_headers=False, pool=None, proxy_host=None, proxy_port=80):
+def request(method, url, values={}, header={}, return_headers=False, pool=None, proxy=None):
     """
     Performs an HTTP request.
     
@@ -33,15 +35,14 @@ def request(method, url, values={}, header={}, return_headers=False, pool=None, 
     :param pool: Optional instance of `HTTPConnectionPool` for keep-alive. Defaults to
       not using a connection pool.
     
-    :param proxy_host: Hostname or IP of the proxy to use. Defaults to not using a proxy.
-    
-    :param proxy_port: Port of the proxy to use. Defaults to 80.
+    :param proxy: URL to the proxy. An empty string or no proxy. `None` to check
+      the environment variable `http_proxy`.
     """
     
     if method != GET and method != POST:
         raise ValueError("Unsupported method")
     
-    agent = _make_agent(pool, proxy_host, proxy_port)
+    agent = _make_agent(pool, proxy)
     
     values = urllib.urlencode(values)
     if values:
@@ -77,7 +78,9 @@ def request(method, url, values={}, header={}, return_headers=False, pool=None, 
     d.addCallback(got_response)
     return d
 
-def _make_agent(pool=None, proxy_host=None, proxy_port=80):
+
+def _make_agent(pool=None, proxy=None):
+    proxy_host, proxy_port = _get_proxy(proxy) 
     if proxy_host:
         endpoint = TCP4ClientEndpoint(reactor, proxy_host, proxy_port)
         agent = ProxyAgent(endpoint, pool=pool)
@@ -85,4 +88,25 @@ def _make_agent(pool=None, proxy_host=None, proxy_port=80):
         agent = Agent(reactor, pool=pool)
     agent = BrowserLikeRedirectAgent(agent)
     return agent
-        
+
+
+def _get_proxy(proxy=None):
+    """
+    Returns `(hostname, port)` of proxy, or `(None, None)` if no proxy is to be used.
+    """
+    if proxy is None:
+        proxy = os.environ.get("http_proxy", "")
+    if proxy:
+        parts = urlparse.urlparse(proxy)
+        if parts.scheme != "http":
+            raise ValueError("Proxy protocol %s is not supported" % repr(parts.scheme))
+        hostname = parts.hostname
+        port = parts.port
+        if not port:
+            port = 80
+        if hostname:
+            return (hostname, port)
+        else:
+            return (None, None)
+    else:
+        return (None, None)

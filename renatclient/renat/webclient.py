@@ -14,16 +14,31 @@ import json
 from renat import httpclient
 
 class WebClient(object):
+    """
+    Client to communicate with the webservice.
     
-    def __init__(self, server, secret, proxy_host=None, proxy_port=80):
+    Manages a connection pool, supports using a proxy.
+    """
+    
+    def __init__(self, server, secret, proxy = None):
+        """
+        :param server: Url of the server.
+        :param secret: Passpharse. Only clients with the same secret can interact, 
+          even when using the same server.
+        :param proxy: URL to the proxy. An empty string or no proxy. `None` to check
+          the environment variable `http_proxy`.
+        """
         self.server = server
         self.encryption_key = _make_key(secret)
-        self.proxy_host = proxy_host
-        self.proxy_port = proxy_port
+        self.proxy = proxy
         self.pool = HTTPConnectionPool(reactor, persistent=True)
         self.pool.maxPersistentPerHost = 1024
     
+    
     def close(self):
+        """
+        Closes the connection pool.
+        """
         return self.pool.closeCachedConnections()
     
    
@@ -51,12 +66,18 @@ class WebClient(object):
                     
 
     def get_jungest(self, key, wait=False):
+        """
+        Returns a tuple with the jungest version and value for the given key.
+        """
         d = self._get(key, "JUNGEST", wait)
         d.addCallback(lambda r:(r["record_version"], r["value"]))
         return d
     
 
     def get_oldest(self, key, wait=False):
+        """
+        Returns a tuple with the oldest version and value for the given key.
+        """
         d = self._get(key, "OLDEST", wait)
         d.addCallback(lambda r:(r["record_version"], r["value"]))
         return d
@@ -99,8 +120,7 @@ class WebClient(object):
             values = {'timeout': str(timeout)}
         else:
             values = {}
-        d = httpclient.request("GET", url, values, 
-                    pool=self.pool, proxy_host=self.proxy_host, proxy_port=self.proxy_port)
+        d = httpclient.request("GET", url, values, pool=self.pool, proxy=self.proxy)
         d.addCallback(json.loads)
         return d
         
@@ -109,7 +129,7 @@ class WebClient(object):
         idepo = _get_random_string()
         url = self._url(record_id, record_version)
         d = httpclient.request("POST", url, {"idepo":idepo, "data":value}, {"Content-Type":["application/x-www-form-urlencoded"]},
-                    pool=self.pool, proxy_host=self.proxy_host, proxy_port=self.proxy_port)
+                    pool=self.pool, proxy=self.proxy)
         d.addCallback(json.loads)
         return d
 
