@@ -102,6 +102,12 @@ class TestWebClientIntegration(unittest.TestCase):
         d.addErrback(eb)
         actual = yield d
         self.assertEqual("ok", actual)
+        
+    @with_reactor
+    @defer.inlineCallbacks
+    def test_publicip(self):
+        yield self.client.public_ip()
+        
             
 class TestWebClient(unittest.TestCase):
 

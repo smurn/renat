@@ -41,7 +41,19 @@ class WebClient(object):
         """
         return self.pool.closeCachedConnections()
     
-   
+    def public_ip(self):
+        """
+        Returns our IP as it is seen from the server.
+        """
+        def cb(headers):
+            return headers["X-Request-From"]
+        url = self._url(0, 0)
+        d = httpclient.request("GET", url, return_headers=True, pool=self.pool, proxy=self.proxy)
+        
+        d.addCallback(lambda headers:headers["X-Request-From"][0])
+        #d.addCallback(cb)
+        return d
+    
     def put(self, key, value):
         """
         Store new key-value pair.
@@ -121,7 +133,12 @@ class WebClient(object):
         else:
             values = {}
         d = httpclient.request("GET", url, values, pool=self.pool, proxy=self.proxy)
-        d.addCallback(json.loads)
+        def gotit(v):
+            try:
+                return json.loads(v)
+            except BaseException as e:
+                print e
+        d.addCallback(gotit)
         return d
         
 
