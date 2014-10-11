@@ -27,7 +27,7 @@ class Test(unittest.TestCase):
         def out(data):
             print data
             
-        _, headers = yield httpclient.request("GET", "http://www.python.org", return_headers=True);
+        headers = yield httpclient.request("GET", "http://www.python.org", return_headers=True);
         self.assertTrue("Content-Type" in headers)
         
 

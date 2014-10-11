@@ -28,9 +28,7 @@ def request(method, url, values={}, header={}, return_headers=False, pool=None, 
     
     :param headers: Dict with the header values to send.
     
-    :param return_headers: If `True` the function will return a `(body, header)` tuple
-      with both the body of the answer and the headers. If `False` the function returns 
-      the body only. Defaults to `False`.
+    :param return_headers: If `True` the function will return the headers intead of the body.
       
     :param pool: Optional instance of `HTTPConnectionPool` for keep-alive. Defaults to
       not using a connection pool.
@@ -55,16 +53,15 @@ def request(method, url, values={}, header={}, return_headers=False, pool=None, 
         request_body = None
     
     def got_response(response):
-        
-        def got_body(response_body):
-            if return_headers:
-                response_headers = dict(response.headers.getAllRawHeaders())
-                return (response_body, response_headers)
-            else:
-                return response_body
 
-        if response.code != httplib.OK:
-            return Failure(Error(response.code))
+        def got_body(body):
+            if return_headers:
+                return dict(response.headers.getAllRawHeaders())
+            else:
+                if response.code != httplib.OK:
+                    return Failure(Error(response.code))
+                return body
+            
         d = readBody(response)
         d.addCallback(got_body)
         return d
